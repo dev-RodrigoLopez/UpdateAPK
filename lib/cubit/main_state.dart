@@ -14,6 +14,7 @@ class MainState extends Equatable{
     this.message = '',
     this.versionName = '',
     this.versionCode = '',
+    this.users = const [],
     
   });
 
@@ -21,17 +22,20 @@ class MainState extends Equatable{
   final String message;
   final String versionName;
   final String versionCode;
+  final List<User> users;
 
   MainState copyWith({
     StatusMain? status,
     String? message,
     String? versionName,
     String? versionCode,
+    List<User>? users,
   }) => MainState(
     status: status ?? this.status,
     message: message ?? this.message,
     versionName: versionName ?? this.versionName,
-    versionCode: versionCode ?? this.versionCode
+    versionCode: versionCode ?? this.versionCode,
+    users: users ?? this.users,
   );
   
   @override
@@ -40,6 +44,7 @@ class MainState extends Equatable{
     message,
     versionName,
     versionCode,
+    users,
   ];
 
 }

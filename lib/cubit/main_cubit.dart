@@ -1,6 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:update_apk/data/database_instance.dart';
+import 'package:update_apk/models/user_model.dart';
 import 'package:update_apk/rest_provider_update.dart';
 import 'package:update_apk/utils.dart';
 
@@ -19,13 +21,18 @@ class MainCubit extends Cubit<MainState> {
     
     // 2.- Comparar versiones
     final needsUpdate = await Utils().isUpdateAvailable(updateInfo);
-    if (!needsUpdate) {
+    if (needsUpdate) {
+    // if (!needsUpdate) {
+
+      await getAllUsers();
+
       emit(
         state.copyWith(
           status: StatusMain.success, 
           message: "La app esta actualizada",
           versionName: info.version,
-          versionCode: info.buildNumber
+          versionCode: info.buildNumber,
+          users: state.users,
         )
       );
       return;
@@ -55,6 +62,13 @@ class MainCubit extends Cubit<MainState> {
 
   }
 
+  Future<List<User>> getAllUsers() async {
+
+    final instanceDB = await DatabaseInstance.instance; 
+    final user = instanceDB.userDao.getAllUsers();
+    return user;
+
+  }
 
 
 }

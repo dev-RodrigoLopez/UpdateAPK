@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:update_apk/cubit/main_cubit.dart';
+import 'package:update_apk/data/app_database.dart';
+import 'package:update_apk/data/database_instance.dart';
 
 
-void main() => runApp(const MyApp());
+late AppDatabase database;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await DatabaseInstance.instance;
+
+  runApp(MyApp());
+}
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -14,83 +23,37 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool checking = false;
-  String? status;
-  String versionName = "";
-  String versionCode = "";
+
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final info = await PackageInfo.fromPlatform();
-      setState(() {
-        versionName = info.version;
-        versionCode = info.buildNumber;
-      });
+
     });
   }
 
-  /// Función que maneja toda la actualización
-  Future<void> handleUpdate() async {
-    // setState(() {
-    //   checking = true;
-    //   status = "Consultando versión...";
-    // });
 
-    // try {
-    // final updateInfo = await UpdateService.checkForUpdate();
-    // if (updateInfo == null) {
-    //   setState(() => status = "No hay actualización disponible.");
-    //   return;
-    // }
-
-    // final needsUpdate = await Utils().isUpdateAvailable(updateInfo);
-    // if (!needsUpdate) {
-    //   setState(() => status = "La app está actualizada.");
-    //   return;
-    // }
-
-    // setState(() => status = "Solicitando permisos de almacenamiento...");
-    // await Utils().requestStoragePermissions();
-
-    // setState(() => status = "Descargando APK...");
-
-    // Usamos el fileId de Google Drive en lugar de la URL
-    // final fileId = "1-nZEnorVTw-vEvoV4c5vXLcwla71MqVL";
-    // final apkFile = await Utils().downloadApk(updateInfo.apkUrl);
-
-    // setState(() => status = "Validando permisos de instalación...");
-    // final granted = await Utils().checkInstallPermission();
-    // if (!granted) {
-    //   setState(() => status = "Permiso de instalación denegado.");
-    //   return;
-    // }
-
-    // setState(() => status = "Instalando actualización...");
-    // await Utils().installApk(apkFile);
-
-    //   setState(() => status = "Actualización finalizada correctamente.");
-    // } catch (e) {
-    //   setState(() => status = "Error: $e");
-    // } finally {
-    //   setState(() => checking = false);
-    // }
-  }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
     return MaterialApp(
       title: 'Actualizar App',
       home: BlocProvider(
         create: (context) => MainCubit()..init(),
         child: Scaffold(
-          appBar: AppBar(title: const Text("Información de versión")),
+          appBar: AppBar(
+            title: const Text("UpdateApp Demo"),
+            centerTitle: true,
+          ),
           body: BlocBuilder<MainCubit, MainState>(
             builder: (context, state) {
 
               if (state.status == StatusMain.loading) {
                 return  Center(child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircularProgressIndicator(),
                     Text(
@@ -103,16 +66,48 @@ class _MyAppState extends State<MyApp> {
                 ));
               }
 
-              return Text(
-                "Version Name: ${state.versionName}\nVersion Code: ${state.versionCode}",
-                textAlign: TextAlign.center,
+              return Column(
+                children: [
+                  Expanded(
+                    child: state.users.isEmpty 
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center, 
+                          children: [
+                            Icon( Icons.no_accounts, size: 100),
+                            Text( 'No hay usuarios' ),
+                          ]
+                        ),
+                      )
+                    : ListView.builder(
+                      itemCount: state.users.length,
+                      itemBuilder: (context, index) {
+                        final user = state.users[index];
+                        return ListTile(
+                          title: Text(user.name),
+                          subtitle: Text(user.age.toString()),
+                        );
+                      },
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      '${state.versionName} (${state.versionCode})',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500
+                      )
+                    ),
+                  )
+
+                ]
               );
             },
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: checking ? null : handleUpdate,
-            child: const Icon(Icons.install_mobile),
-          ),
+          // floatingActionButton: FloatingActionButton(
+          //   onPressed: checking ? null : handleUpdate,
+          //   child: const Icon(Icons.install_mobile),
+          // ),
         ),
       ),
     );
