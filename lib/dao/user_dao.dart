@@ -12,7 +12,7 @@ abstract class UserDao {
   Future<User?> findUserById(int id);
 
   @insert
-  Future<void> insertUser(User user);
+  Future<int> insertUser(User user);
 
   @update
   Future<void> updateUser(User user);

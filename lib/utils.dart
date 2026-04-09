@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,30 +22,46 @@ class Utils {
   }
 
   /// Solicita permisos de almacenamiento
-  Future<void> requestStoragePermissions() async {
-    if (Platform.isAndroid) {
-      if (await Permission.manageExternalStorage.isGranted ||
-          await Permission.storage.isGranted) {
-        return;
-      }
+Future<bool> requestStoragePermissions() async {
+  if (!Platform.isAndroid) return true; // iOS no requiere
 
-      // Android 11 o superior
-      if (await Permission.manageExternalStorage.request().isGranted) return;
-
-      // Android 10 o inferior
-      if (await Permission.storage.request().isGranted) return;
-
-      throw Exception("Permisos de almacenamiento no otorgados");
-    }
+  if (await Permission.manageExternalStorage.isGranted || await Permission.storage.isGranted) {
+    return true;
   }
+
+  // Android 11 o superior
+  final manageStatus = await Permission.manageExternalStorage.request();
+  if (manageStatus.isGranted) return true;
+
+  // Android 10 o inferior
+  final storageStatus = await Permission.storage.request();
+  if (storageStatus.isGranted) return true;
+
+  final finalStatus = await Permission.manageExternalStorage.isGranted ||
+      await Permission.storage.isGranted;
+
+  return finalStatus;
+}
 
   /// Verifica permisos de instalación
-  Future<bool> checkInstallPermission() async {
-    if (await Permission.requestInstallPackages.isGranted) return true;
+Future<bool> checkInstallPermission() async {
 
-    final status = await Permission.requestInstallPackages.request();
-    return status.isGranted;
+  if (await Permission.requestInstallPackages.isGranted) {
+    return true;
   }
+
+  final status = await Permission.requestInstallPackages.request();
+
+  if (status.isGranted) {
+    return true;
+  }
+
+  if (await Permission.requestInstallPackages.isGranted) {
+    return true;
+  }
+
+  return false;
+}
 
   Future<File> downloadApk(String url) async {
     print('-- Descargando actualización...');
@@ -71,58 +89,29 @@ class Utils {
     }
   }
 
-  /// Descarga APK desde Google Drive correctamente
-  // Future<File> downloadGoogleDriveFile(String fileId) async {
-  //   final client = http.Client();
-
-  //   final url = Uri.parse("https://drive.google.com/uc?export=download&id=$fileId");
-  //   final initialResponse = await client.get(url);
-
-  //   if (initialResponse.headers['content-type']!.contains('text/html')) {
-  //     // Google Drive requiere token de confirmación
-  //     final html = initialResponse.body;
-  //     final exp = RegExp("confirm=([0-9A-Za-z_]+)");
-  //     final match = exp.firstMatch(html);
-
-  //     if (match == null) {
-  //       throw Exception("No se pudo obtener token de Google Drive.");
-  //     }
-
-  //     final confirmToken = match.group(1)!;
-  //     final downloadUrl = Uri.parse(
-  //         "https://drive.google.com/uc?export=download&confirm=$confirmToken&id=$fileId");
-
-  //     final headers = {"Cookie": initialResponse.headers["set-cookie"] ?? ""};
-  //     final downloadResponse = await client.get(downloadUrl, headers: headers);
-
-  //     if (downloadResponse.statusCode != 200) {
-  //       throw Exception("Error descargando archivo final.");
-  //     }
-
-  //     final dir = await getExternalStorageDirectory();
-  //     final file = File("${dir!.path}/update.apk");
-  //     await file.writeAsBytes(downloadResponse.bodyBytes, flush: true);
-
-  //     print("-- APK descargado en: ${file.path} (${file.lengthSync()} bytes)");
-  //     return file;
-  //   }
-
-  //   // Si no requiere confirmación
-  //   final dir = await getExternalStorageDirectory();
-  //   final file = File("${dir!.path}/update.apk");
-  //   await file.writeAsBytes(initialResponse.bodyBytes, flush: true);
-
-  //   print("-- APK descargado en: ${file.path} (${file.lengthSync()} bytes)");
-  //   return file;
-  // }
 
   /// Instala APK usando OpenFilex
-  Future<void> installApk(File apkFile) async {
+  Future<bool> installApk(File apkFile) async {
     final result = await OpenFilex.open(
       apkFile.path,
       type: "application/vnd.android.package-archive",
     );
-    print('-- Resultado de instalación: $result');
+
+    print('-- Resultado de instalación: ${result.type}');
+
+    if (result.type == ResultType.done) {
+      // La instalación se inició correctamente
+      return true;
+    }
+
+    // Si el usuario canceló o ocurrió error
+    if (result.type == ResultType.error) {
+      print("El usuario canceló la instalación o ocurrió un error.");
+      return false;
+    }
+
+    return false;
+
   }
 
   /// Flujo completo: chequea update, permisos, descarga e instalación
@@ -141,4 +130,18 @@ class Utils {
     final apkFile = await downloadApk(fileId);
     await installApk(apkFile);
   }
+
+  static Future<bool> checkInternetConnection() async {
+    final result = await Connectivity().checkConnectivity();
+    return !result.contains(ConnectivityResult.none);
+  }
+
+  static Future<bool> connectionChecker() async {
+
+    bool result = await InternetConnection().hasInternetAccess;
+    return result;
+  }
+
+
+
 }

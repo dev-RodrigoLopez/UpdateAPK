@@ -96,7 +96,7 @@ class _$AppDatabase extends AppDatabase {
       },
       onCreate: (database, version) async {
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `users` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `age` INTEGER NOT NULL, PRIMARY KEY (`id`))');
+            'CREATE TABLE IF NOT EXISTS `users` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `name` TEXT NOT NULL, `age` INTEGER NOT NULL)');
 
         await callback?.onCreate?.call(database, version);
       },
@@ -157,21 +157,26 @@ class _$UserDao extends UserDao {
   @override
   Future<List<User>> getAllUsers() async {
     return _queryAdapter.queryList('SELECT * FROM users',
-        mapper: (Map<String, Object?> row) =>
-            User(row['id'] as int, row['name'] as String, row['age'] as int));
+        mapper: (Map<String, Object?> row) => User(
+            id: row['id'] as int?,
+            name: row['name'] as String,
+            age: row['age'] as int));
   }
 
   @override
   Future<User?> findUserById(int id) async {
     return _queryAdapter.query('SELECT * FROM users WHERE id = ?1',
-        mapper: (Map<String, Object?> row) =>
-            User(row['id'] as int, row['name'] as String, row['age'] as int),
+        mapper: (Map<String, Object?> row) => User(
+            id: row['id'] as int?,
+            name: row['name'] as String,
+            age: row['age'] as int),
         arguments: [id]);
   }
 
   @override
-  Future<void> insertUser(User user) async {
-    await _userInsertionAdapter.insert(user, OnConflictStrategy.abort);
+  Future<int> insertUser(User user) {
+    return _userInsertionAdapter.insertAndReturnId(
+        user, OnConflictStrategy.abort);
   }
 
   @override

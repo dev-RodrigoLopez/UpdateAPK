@@ -2,11 +2,17 @@ import 'package:floor/floor.dart';
 
 @Entity(tableName: 'users')
 class User {
-  @primaryKey
-  final int id;
+  
+  User({
+    this.id,
+    required this.name, 
+    required this.age
+  });
 
-  final String name;
-  final int age;
 
-  User(this.id, this.name, this.age);
+  @PrimaryKey( autoGenerate: true )
+  int? id;
+  String name;
+  int age;
+
 }
